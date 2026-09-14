@@ -1,0 +1,28 @@
+{
+  "name": "stepcounterapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/somtamas/stepcounterapi.git"
+  },
+  "author": "ST",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/somtamas/stepcounterapi/issues"
+  },
+  "homepage": "https://github.com/somtamas/stepcounterapi#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mysql": "^2.18.1"
+  }
+}
