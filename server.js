@@ -14,6 +14,7 @@ var pool = mysql.createPool({
 });
 
 app.use(express.urlencoded({ extended: true })); // ez kell, hogy a req.body működjön
+app.use(express.json()); //kommunikáció json formában
 
 app.get('/', (_req, res) => {
     res.send('Welcome to the Stepconter API!')
@@ -37,10 +38,10 @@ app.post('/users/register', (req, res) => {
         return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    // Check password strength (later...)
+    //TODO: Check password strength (with regular expression)
 
     // Check if email aready exists
-    pool.query('SELECT * FROM users WHERE email = ?', [email], (error, results) => {
+    pool.query('SELECT * FROM users WHERE email = ?', [email], (error, results) => { // SQL injection !!!
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
@@ -60,6 +61,53 @@ app.post('/users/register', (req, res) => {
 });
 
 // login
+app.post('/users/login', (req, res) => {
+    const { email, password } = req.body;
+
+    // VALIDATION
+
+    // Check for missing fields
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Check email and password exists
+    pool.query('SELECT * FROM users WHERE email=? AND password=SHA1(?)', [email, password], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' });
+        }
+        
+        // if this user doesn't exists with this email and password
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'Invalid credentials! '})
+        }
+
+        //TODO: check user is active?
+        if (results[0].is_active == 0) {
+            return res.status(400).json({ error: 'This user is banned by admin!' });
+        }
+
+        // if this user exists with these credentials
+        // res.status(200).json({ message: 'You are successfully logged in!'});
+        // const loggedUser = results[0];
+        const loggedUser = {
+            ID: results[0].ID,
+            name: results[0].name,
+            email: results[0].email,
+            role: results[0].role
+        }
+
+        //TODO: update last_login and login_count fields in users table
+        pool.query('UPDATE users SET last_login=CURRENT_TIMESTAMP, login_count=login_count+1 WHERE ID=?', [results[0].ID,], (error, result)=> {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error' });
+            }
+
+            //TODO: send logged user data to frontend
+            return res.status(200).json({ message: 'You are successfully logged in!', loggedUser });
+        });
+    });
+});
 
 // logout ?
 
