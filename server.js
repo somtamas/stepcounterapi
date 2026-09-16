@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 var sha1 = require('sha1');
+var cors = require('cors');
 
 const app = express();
 const port = 3000;
@@ -14,6 +15,7 @@ var pool = mysql.createPool({
     database:'stepcounter'
 });
 
+app.use(cors());
 app.use(express.urlencoded({ extended: true })); // ez kell, hogy a req.body működjön
 app.use(express.json()); //kommunikáció json formában
 
