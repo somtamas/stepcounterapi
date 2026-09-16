@@ -15,7 +15,7 @@ var pool = mysql.createPool({
     database:'stepcounter'
 });
 
-app.use(cors());
+app.use(cors()); // Access-Control-Allow-Origin: *
 app.use(express.urlencoded({ extended: true })); // ez kell, hogy a req.body működjön
 app.use(express.json()); //kommunikáció json formában
 
