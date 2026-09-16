@@ -1,5 +1,6 @@
 const express = require('express');
 const mysql = require('mysql');
+var sha1 = require('sha1');
 
 const app = express();
 const port = 3000;
@@ -109,9 +110,58 @@ app.post('/users/login', (req, res) => {
     });
 });
 
-// logout ?
+// logout ? elvileg ebben a projektben nem kell rá backend endpoint
 
 // password change
+app.post('/users/:uid/passmod', (req, res) => {
+    const {oldpassword, newpassword, confirm} = req.body; // átvesszük a frontend-ről érkező adatokat
+    const uid = req.params.uid; // kiolvassuk az url-ből a userID-t
+
+    // megnézzük hogy minden kötelező mezőt megadott-e
+    if (!oldpassword || !newpassword || !confirm) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // összehasonlítjuk az új jelszavakat
+    if (newpassword != confirm) {
+        return res.status(400).json({ error: 'The new password and it\'s confirm doesn\'t match!'});
+    }
+
+    // megnézzük, hogy az új megegyezik-e a régivel
+    if (oldpassword == newpassword) {
+        return res.status(400).json({ error: 'The new password equals with olda password!' })
+    }
+
+    //TODO: newpassword strength check with regular expression
+
+    // megnézzük hogy a megadott régi jelszó stimmel-e?
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' });
+        }
+
+        // ha nincs ilyen id-jű user
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'This users doesn\'t exsist!'});
+        }
+
+        const oldpasswordHash = sha1(oldpassword);
+
+        // ha nem stimmel a megadott régi jelszó
+        if (results[0].password != oldpasswordHash) {
+            return res.status(400).json({ error: 'The olda password is not correct!' });
+        }
+
+        //update password
+        pool.query('UPDATE users SET password=SHA1(?) WHERE ID=?', [newpassword, uid], (error, results) => {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error' });
+            }
+
+            return res.status(200).json({ message: 'The password was modified successfully!'});
+        })
+    })
+});
 
 // get profile
 
