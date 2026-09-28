@@ -5,6 +5,7 @@ var cors = require('cors');
 
 const app = express();
 const port = 3000;
+const passwordRegExp = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
 
 var pool = mysql.createPool({
     connectionLimit: 10,
@@ -42,6 +43,9 @@ app.post('/users/register', (req, res) => {
     }
 
     //TODO: Check password strength (with regular expression)
+    if (password.match(passwordRegExp)) {
+        return res.status(400).json({ error: 'the new password is too weak!'})
+    }
 
     // Check if email aready exists
     pool.query('SELECT * FROM users WHERE email = ?', [email], (error, results) => { // SQL injection !!!
@@ -407,13 +411,14 @@ app.delete('/users/:uid/steps/:stepID', (req, res) => {
 //ADMIN ENDPOINTS
 
 // get all users
-app.patch('/admin/:uid/status', (req, res) => {
-    const { uid } = req.body;
+app.post('/admin/users', (req, res) => {
+    const  luid  = req.body.luid;
  
-    if (!uid) {
+    if (!luid) {
         return res.status(400).json({ error: 'Missing user identifier' });
     }
-    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+ 
+    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
@@ -422,25 +427,18 @@ app.patch('/admin/:uid/status', (req, res) => {
         }
  
         if (results[0].role != 'admin') {
-            return res.status(400).json({ error: 'Only admins can change user statuses!' });
+            return res.status(400).json({ error: 'Only admins can get users list!' });
         }
-        pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+ 
+        pool.query('SELECT * FROM users', (error, results) => {
             if (error) {
-                return res.status(500).json({ error: 'Database query error.' });
+                res.status(500).json({ 'Database query error: ': error });
+            } else {
+                res.status(200).json(results);
             }
-            if (results.length == 0) {
-                return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
-            }
- 
-            pool.query('UPDATE users SET is_active= not is_active WHERE ID=?', [uid], (error, results2) => {
-                if (error) {
-                    return res.status(500).json({ error: 'Database query error.' });
-                }
-                return res.status(200).json({ message: 'User status changed successfully!' });
-            });
         });
-    });
  
+    });
 });
 
 // deny user
