@@ -166,36 +166,285 @@ app.post('/users/:uid/passmod', (req, res) => {
 });
 
 // get profile
+app.get('/users/:uid', (req, res) => {
+    const uid = req.params.uid;
+ 
+    if (!uid) {
+        return res.status(400).json({ error: 'Missing user identifier' })
+    }
+ 
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' })
+        }
+ 
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exits!' });
+        }
+ 
+        let user = {
+            "name": results[0].name,
+            "email": results[0].email,
+            "role": results[0].role,
+            "created_at": results[0].created_at
+        }
+ 
+        return res.status(200).json({ results: user });
+ 
+    });
+});
 
 // update profile
+app.patch('/users/:uid', (req, res) => {
+    const uid = req.params.uid;
+    const { username, email, luid } = req.body;
+ 
+    if (!uid || !username || !email || !luid) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+ 
+    if (uid != luid) {
+        return res.status(400).json({ error: 'You are not authorized to update this profile!' });
+    }
+ 
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error.' });
+        }
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+        }
+ 
+        if ((username == results[0].name) && (email == results[0].email)) {
+            return res.status(200).json({ error: 'No changes detected!' });
+        }
+ 
+        pool.query('SELECT * FROM USERS WHERE EMAIL=? AND ID<>?', [email, uid], (error, results2) => {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error.' });
+            }
+            if (results2.length > 0) {
+                return res.status(400).json({ error: 'Email is already in use!' });
+            }
+ 
+            pool.query('UPDATE users SET name =?, email=? updated_at=CURRENT_TIMESTAMP WHERE ID=?', [username, email, uid], (error, results3) => {
+                if (error) {
+                    return res.status(500).json({ error: 'Database query error.' });
+                }
+                return res.status(200).json({ message: 'Profile updated successfully!' });
+            });
+        });
+    });
+});
+ 
 
 // delete profile
+app.delete('/users/:uid', (req, res) => {
+    const uid = req.params.uid;
+    const loggedUserID = req.body.luid;
+ 
+    if (!uid) {
+        return res.status(400).json({ error: 'Missing user identifier' });
+    }
+ 
+    if (uid != loggedUserID) {
+        return res.status(400).json({ error: 'You don\'t have permission to delete this user!' });
+    }
+ 
+    pool.query('DELETE FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' });
+        }
+ 
+        if (results.affectedRows == 1) {
+            return res.status(200).json({ error: 'User deleted successfully!' })
+        }
+ 
+        return res.status(200).json({ message: 'No deletion occured!' });
+ 
+    });
+});
 
 // STEPS ENDPOINTS ----------------------------
 
 // create step
+app.post('/steps/:uid', (req, res) => {
+    const uid = req.params.uid;
+    const { luid, date, step_count } = req.body;
+    var todaysDate = new Date();
+   
+ 
+    if (!uid || !luid || !date || step_count == null) {
+        return res.status(400).json({ error: 'Missing fields in.' });
+    }
+    if (uid != luid) {
+        return res.status(400).json({ error: 'You don\'t have permission to add steps for this user!' });
+    }
+    if (step_count <= 0) {
+        return res.status(400).json({ error: 'Step count cannot be negative or negative.' });
+    }
+    if (new Date(date) > todaysDate){
+      return res.status(400).json({error: 'The date can not be in the future or can not be in negative.'})
+    }
+ 
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error.' });
+        }
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+        }
+ 
+        pool.query('SELECT * FROM steps WHERE user_id=? AND date=?', [uid, date], (error, results2) => {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error.' });
+            }
+            if (results2.length > 0) {
+                return res.status(400).json({ error: 'A step entry already exists for this date. Use update.' });
+            }
+ 
+            pool.query('INSERT INTO steps (user_id, step_count, date) VALUES (?, ?, ?)', [uid, step_count, date], (error, results3) => {
+                    if (error) {
+                        return res.status(500).json({ error: 'Database query error.' });
+                    }
+                    return res.status(200).json({ message: 'Step entry added successfully!'});
+                }
+            );
+        });
+    });
+});
 
 // get steps (user) // table view, calendar view, char view
+app.post('/steps/:uid', (req, res) => {
+    const uid = req.params.uid;
+    const luid = req.body.luid;
+ 
+    if (!uid) {
+        return res.status(400).json({ error: 'Missing user identifier' })
+    }
+ 
+    pool.query('SELECT * FROM steps WHERE user_id=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' })
+        }
+ 
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exits!' });
+        }
+ 
+        let step = {
+            "user_id": results[0].user_id,
+            "step_count": results[0].step_count,
+            "created_at": results[0].created_at,
+            "updated_at": results[0].updated_at
+        }
+ 
+        return res.status(200).json({ results: step });
+ 
+    });
+});
 
 // update step
+app.patch('/users/:uid/steps/:stepID', (req, res) => {
+    const uid = req.params.uid;
+    const stepID = req.params.stepID;
+    const { luid, step_count } = req.body;
+ 
+    if (!uid || !stepID || !luid || step_count == null) {
+        return res.status(400).json({ error: 'Missing fields.' });
+    }
+    if (uid != luid) {
+        return res.status(400).json({ error: 'You don\'t have permission to update this step entry!' });
+    }
+    if (step_count <= 0) {
+        return res.status(400).json({ error: 'Step count cannot be negative or null.' });
+    }
+ 
+    pool.query('SELECT * FROM steps WHERE ID=?', [stepID], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error.' });
+        }
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'Step entry with this ID doesn\'t exist!' });
+        }
+        if (results[0].user_id != uid) {
+            return res.status(400).json({ error: 'This step entry doesn\'t belong to this user!' });
+        }
+ 
+        pool.query('UPDATE steps SET step_count=?, updated_at=CURRENT_TIMESTAMP WHERE ID=?', [step_count, stepID], (error, results2) => {
+                if (error) {
+                    return res.status(500).json({ error: 'Database query error.' });
+                }
+                return res.status(200).json({ message: 'Step entry updated successfully!' });
+            }
+        );
+    });
+});
 
 // delete step
+app.delete('/users/:uid/steps/:stepID', (req, res) => {
+  const uid = req.params.uid;
+  const luid = req.body.luid;
+  const stepID = req.params.stepID;
+ 
+  if(!uid || !luid){
+    return res.status(400).json({error: 'Missing user identifier.'});
+  }
+  if (uid!=luid){
+    return res.status(400).json({error: 'You don\'t have permission to delete this user!'});
+  }
+  pool.query('DELETE FROM steps WHERE ID=?', [stepID], (error, results) => {
+    if (error){
+      return res.status(500).json({error: 'Database query error.'})
+    }
+    if (results.affectedRows == 1){
+            return res.status(200).json({message: 'Steps data deleted successfully!'});
+        }
+        return res.status(200).json({error: 'No deletion occurred.'});
+  })
+})
 
 //ADMIN ENDPOINTS
 
 // get all users
-app.get('/admin/users', (_req, res) => {
-    pool.query('SELECT * FROM users', (error, results) => {
-        if (error){
-            res.status(500).json({ 'Database query error: ': error });
+app.patch('/admin/:uid/status', (req, res) => {
+    const { uid } = req.body;
+ 
+    if (!uid) {
+        return res.status(400).json({ error: 'Missing user identifier' });
+    }
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error.' });
         }
-        else {
-            res.status(200).json(results);
+        if (results.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
         }
+ 
+        if (results[0].role != 'admin') {
+            return res.status(400).json({ error: 'Only admins can change user statuses!' });
+        }
+        pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error.' });
+            }
+            if (results.length == 0) {
+                return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            }
+ 
+            pool.query('UPDATE users SET is_active= not is_active WHERE ID=?', [uid], (error, results2) => {
+                if (error) {
+                    return res.status(500).json({ error: 'Database query error.' });
+                }
+                return res.status(200).json({ message: 'User status changed successfully!' });
+            });
+        });
     });
+ 
 });
 
 // deny user
+
 
 // statistics (total steps, average steps, top users)
 
