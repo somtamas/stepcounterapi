@@ -76,7 +76,7 @@ app.post('/users/register', (req, res) => {
 app.post('/users/login', (req, res) => {
     const { email, password } = req.body;
 
-    // VALIDATION
+    // VALidATION
 
     // Check for missing fields
     if (!email || !password) {
@@ -103,14 +103,14 @@ app.post('/users/login', (req, res) => {
         // res.status(200).json({ message: 'You are successfully logged in!'});
         // const loggedUser = results[0];
         const loggedUser = {
-            ID: results[0].ID,
+            id: results[0].id,
             name: results[0].name,
             email: results[0].email,
             role: results[0].role
         }
 
         //TODO: update last_login and login_count fields in users table
-        pool.query('UPDATE users SET last_login=CURRENT_TIMESTAMP, login_count=login_count+1 WHERE ID=?', [results[0].ID,], (error, result) => {
+        pool.query('UPDATE users SET last_login=CURRENT_TIMESTAMP, login_count=login_count+1 WHERE id=?', [results[0].id,], (error, result) => {
             if (error) {
                 return res.status(500).json({ error: 'Database query error' });
             }
@@ -126,7 +126,7 @@ app.post('/users/login', (req, res) => {
 // password change
 app.post('/users/:uid/passmod', (req, res) => {
     const { oldpassword, newpassword, confirm } = req.body; // átvesszük a frontend-ről érkező adatokat
-    const uid = req.params.uid; // kiolvassuk az url-ből a userID-t
+    const uid = req.params.uid; // kiolvassuk az url-ből a userid-t
 
     // megnézzük hogy minden kötelező mezőt megadott-e
     if (!oldpassword || !newpassword || !confirm) {
@@ -146,7 +146,7 @@ app.post('/users/:uid/passmod', (req, res) => {
     //TODO: newpassword strength check with regular expression
 
     // megnézzük hogy a megadott régi jelszó stimmel-e?
-    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [uid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
@@ -164,7 +164,7 @@ app.post('/users/:uid/passmod', (req, res) => {
         }
 
         //update password
-        pool.query('UPDATE users SET password=SHA1(?) WHERE ID=?', [newpassword, uid], (error, results) => {
+        pool.query('UPDATE users SET password=SHA1(?) WHERE id=?', [newpassword, uid], (error, results) => {
             if (error) {
                 return res.status(500).json({ error: 'Database query error' });
             }
@@ -182,13 +182,13 @@ app.get('/users/:uid', (req, res) => {
         return res.status(400).json({ error: 'Missing user identifier' })
     }
 
-    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [uid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' })
         }
 
         if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exits!' });
+            return res.status(400).json({ error: 'User with this id doesn\'t exits!' });
         }
 
         let user = {
@@ -216,19 +216,19 @@ app.patch('/users/:uid', (req, res) => {
         return res.status(400).json({ error: 'You are not authorized to update this profile!' });
     }
 
-    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [uid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
         if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            return res.status(400).json({ error: 'User with this id doesn\'t exist!' });
         }
 
         if ((username == results[0].name) && (email == results[0].email)) {
             return res.status(200).json({ error: 'No changes detected!' });
         }
 
-        pool.query('SELECT * FROM USERS WHERE EMAIL=? AND ID<>?', [email, uid], (error, results2) => {
+        pool.query('SELECT * FROM USERS WHERE EMAIL=? AND id<>?', [email, uid], (error, results2) => {
             if (error) {
                 return res.status(500).json({ error: 'Database query error.' });
             }
@@ -236,7 +236,7 @@ app.patch('/users/:uid', (req, res) => {
                 return res.status(400).json({ error: 'Email is already in use!' });
             }
 
-            pool.query('UPDATE users SET name =?, email=? updated_at=CURRENT_TIMESTAMP WHERE ID=?', [username, email, uid], (error, results3) => {
+            pool.query('UPDATE users SET name =?, email=? updated_at=CURRENT_TIMESTAMP WHERE id=?', [username, email, uid], (error, results3) => {
                 if (error) {
                     return res.status(500).json({ error: 'Database query error.' });
                 }
@@ -250,17 +250,17 @@ app.patch('/users/:uid', (req, res) => {
 // delete profile
 app.delete('/users/:uid', (req, res) => {
     const uid = req.params.uid;
-    const loggedUserID = req.body.luid;
+    const loggedUserid = req.body.luid;
 
     if (!uid) {
         return res.status(400).json({ error: 'Missing user identifier' });
     }
 
-    if (uid != loggedUserID) {
+    if (uid != loggedUserid) {
         return res.status(400).json({ error: 'You don\'t have permission to delete this user!' });
     }
 
-    pool.query('DELETE FROM users WHERE ID=?', [uid], (error, results) => {
+    pool.query('DELETE FROM users WHERE id=?', [uid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
@@ -296,12 +296,12 @@ app.post('/steps/:uid', (req, res) => {
         return res.status(400).json({ error: 'The date can not be in the future or can not be in negative.' })
     }
 
-    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [uid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
         if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            return res.status(400).json({ error: 'User with this id doesn\'t exist!' });
         }
 
         pool.query('SELECT * FROM steps WHERE user_id=? AND date=?', [uid, date], (error, results2) => {
@@ -324,42 +324,45 @@ app.post('/steps/:uid', (req, res) => {
 });
 
 // get steps (user) // table view, calendar view, char view
-app.post('/steps/:uid', (req, res) => {
+app.get('/steps/:uid', (req, res) => {
     const uid = req.params.uid;
-    const luid = req.body.luid;
-
+ 
     if (!uid) {
-        return res.status(400).json({ error: 'Missing user identifier' })
+        return res.status(400).json({error: 'Missing user identifier'});
     }
-
-    pool.query('SELECT * FROM steps WHERE user_id=?', [uid], (error, results) => {
-        if (error) {
-            return res.status(500).json({ error: 'Database query error' })
+ 
+    pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error'});
         }
-
-        if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exits!' });
+ 
+        if(results.length == 0){
+            return res.status(400).json({
+                error: 'User with this ID doesn\'t exist!'
+            });
         }
-
-        let step = {
-            "user_id": results[0].user_id,
-            "step_count": results[0].step_count,
-            "created_at": results[0].created_at,
-            "updated_at": results[0].updated_at
-        }
-
-        return res.status(200).json({ results: step });
-
+ 
+        pool.query(
+            'SELECT * FROM steps WHERE user_id=? ORDER BY date DESC',
+            [uid],
+            (error, results) => {
+                if(error){
+                    return res.status(500).json({error: 'Database query error'});
+                }
+ 
+                return res.status(200).json(results);
+            }
+        );
     });
 });
 
 // update step
-app.patch('/users/:uid/steps/:stepID', (req, res) => {
+app.patch('/users/:uid/steps/:stepid', (req, res) => {
     const uid = req.params.uid;
-    const stepID = req.params.stepID;
+    const stepid = req.params.stepid;
     const { luid, step_count } = req.body;
 
-    if (!uid || !stepID || !luid || step_count == null) {
+    if (!uid || !stepid || !luid || step_count == null) {
         return res.status(400).json({ error: 'Missing fields.' });
     }
     if (uid != luid) {
@@ -369,18 +372,18 @@ app.patch('/users/:uid/steps/:stepID', (req, res) => {
         return res.status(400).json({ error: 'Step count cannot be negative or null.' });
     }
 
-    pool.query('SELECT * FROM steps WHERE ID=?', [stepID], (error, results) => {
+    pool.query('SELECT * FROM steps WHERE id=?', [stepid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
         if (results.length == 0) {
-            return res.status(400).json({ error: 'Step entry with this ID doesn\'t exist!' });
+            return res.status(400).json({ error: 'Step entry with this id doesn\'t exist!' });
         }
         if (results[0].user_id != uid) {
             return res.status(400).json({ error: 'This step entry doesn\'t belong to this user!' });
         }
 
-        pool.query('UPDATE steps SET step_count=?, updated_at=CURRENT_TIMESTAMP WHERE ID=?', [step_count, stepID], (error, results2) => {
+        pool.query('UPDATE steps SET step_count=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [step_count, stepid], (error, results2) => {
             if (error) {
                 return res.status(500).json({ error: 'Database query error.' });
             }
@@ -391,10 +394,10 @@ app.patch('/users/:uid/steps/:stepID', (req, res) => {
 });
 
 // delete step
-app.delete('/users/:uid/steps/:stepID', (req, res) => {
+app.delete('/users/:uid/steps/:stepid', (req, res) => {
     const uid = req.params.uid;
     const luid = req.body.luid;
-    const stepID = req.params.stepID;
+    const stepid = req.params.stepid;
 
     if (!uid || !luid) {
         return res.status(400).json({ error: 'Missing user identifier.' });
@@ -402,7 +405,7 @@ app.delete('/users/:uid/steps/:stepID', (req, res) => {
     if (uid != luid) {
         return res.status(400).json({ error: 'You don\'t have permission to delete this user!' });
     }
-    pool.query('DELETE FROM steps WHERE ID=?', [stepID], (error, results) => {
+    pool.query('DELETE FROM steps WHERE id=?', [stepid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' })
         }
@@ -423,12 +426,12 @@ app.post('/admin/users', (req, res) => {
         return res.status(400).json({ error: 'Missing user identifier' });
     }
 
-    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [luid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
         if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            return res.status(400).json({ error: 'User with this id doesn\'t exist!' });
         }
 
         if (results[0].role != 'admin') {
@@ -447,7 +450,47 @@ app.post('/admin/users', (req, res) => {
 });
 
 // deny user
+app.patch('/admin/status', (req, res) => {
+    const { uid, luid } = req.body;
 
+    if (!uid || !luid) {
+        return res.status(400).json({ error: 'Missing required fields!' });
+    }
+
+    // megnézzük, hogy aki hívja ezt az endpointot, az admin-e?
+    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results1) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query error' });
+        }
+
+        if (results1.length == 0) {
+            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+        }
+
+        if (results1[0].role != 'admin') {
+            return res.status(400).json({ error: 'You don\'t have permission to change this user status!' });
+        }
+
+        pool.query('SELECT * FROM users WHERE ID=?', [uid], (error, results) => {
+            if (error) {
+                return res.status(500).json({ error: 'Database query error' });
+            }
+
+            if (results.length == 0) {
+                return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            }
+
+            pool.query('UPDATE users SET is_active = not is_active WHERE ID=?', [uid], (error, results2) => {
+                if (error) {
+                    return res.status(500).json({ error: 'Database query error' });
+                }
+
+                return res.status(200).json({ message: 'User status changed!' });
+            });
+        });
+
+    });
+});
 
 // statistics (total steps, average steps, top users)
 app.post('/admin/statistics', (req, res) => {
@@ -457,12 +500,12 @@ app.post('/admin/statistics', (req, res) => {
         return res.status(400).json({ error: 'Missing user identifier' });
     }
 
-    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results) => {
+    pool.query('SELECT * FROM users WHERE id=?', [luid], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error.' });
         }
         if (results.length == 0) {
-            return res.status(400).json({ error: 'User with this ID doesn\'t exist!' });
+            return res.status(400).json({ error: 'User with this id doesn\'t exist!' });
         }
 
         if (results[0].role != 'admin') {
