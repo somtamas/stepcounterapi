@@ -31,45 +31,45 @@ app.get('/', (_req, res) => {
 
 // USERS ENDPOINTS -----------------------------
 
-// registration
+//registration
 app.post('/users/register', (req, res) => {
-    const { name, email, password, confirm } = req.body;
-
-    //Validate input
-
-    // Check for missing fields
-    if (!name || !email || !password || !confirm) {
+    const { name, email, passwd, confirm } = req.body;
+ 
+    if (!name || !email || !passwd || !confirm) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    // Check if password match
-    if (password !== confirm) {
-        return res.status(400).json({ error: 'Passwords do not match' });
+// kabbe
+    if (passwd !== confirm) {
+        return res.status(400).json({ error: 'Password do not match' });
     }
-
-    //TODO: Check password strength (with regular expression)
-    if (password.match(passwordRegExp)) {
-        return res.status(400).json({ error: 'the new password is too weak!' })
+ 
+    //TODO: check password strength (with regular expenssion)
+ 
+    if(passwd.match(passwordRegExp)){
+        return res.status(400).json({error: 'The new password is too weak!'});
     }
-
-    // Check if email aready exists
-    pool.query('SELECT * FROM users WHERE email = ?', [email], (error, results) => { // SQL injection !!!
+ 
+    pool.query('SELECT * FROM users WHERE email = ?', [email], (error, results) => {
         if (error) {
             return res.status(500).json({ error: 'Database query error' });
         }
-
+ 
         if (results.length > 0) {
-            return res.status(400).json({ error: 'This e-mail aready exists' });
+            return res.status(400).json({ error: 'This e-mail already exists ' })
         }
-
-        // Insert new user into database
-        pool.query('INSERT INTO users (name, email, password, role) VALUES (?, ?, SHA1(?), "user")', [name, email, password], (error, results) => {
+ 
+        pool.query('INSERT INTO users (name, email, password, role) VALUES (?,?,SHA1(?), "user")', [name, email, passwd], (error, results) => {
             if (error) {
                 return res.status(500).json({ error: 'Database insert error' });
             }
-            res.status(201).json({ message: 'User registered successfully' });
+ 
+            return res.status(200).json({ message: 'User registered successfully!' });
         });
+ 
     });
+ 
+ 
+ 
 });
 
 // login
